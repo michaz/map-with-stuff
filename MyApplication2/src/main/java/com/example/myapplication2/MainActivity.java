@@ -34,7 +34,9 @@ import java.util.Map;
 
 public class MainActivity extends Activity {
 
+    public static final String BOUNDING_BOX = "(52.33743685775091,13.103256225585936,52.60888546492018,13.646392822265625)";
     private GoogleMap mMap;
+    private BitmapDescriptor mFireStation;
     private BitmapDescriptor mHydrantMarker;
     private BitmapDescriptor mAboveGround;
     private BitmapDescriptor mBelowGround;
@@ -44,6 +46,7 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         setUpMapIfNeeded();
+        mFireStation = BitmapDescriptorFactory.fromResource(R.drawable.firestation);
         mHydrantMarker = BitmapDescriptorFactory.fromResource(R.drawable.hydrant);
         mAboveGround = BitmapDescriptorFactory.fromResource(R.drawable.above_ground);
         mBelowGround = BitmapDescriptorFactory.fromResource(R.drawable.below_ground);
@@ -74,6 +77,8 @@ public class MainActivity extends Activity {
                     .position(new LatLng(lat, lon))
                     .title("Hydrant Nr. "+ i));
                 }*/
+
+                new DownloadFireStationsTask().execute();
                 new DownloadHydrantsTask().execute();
             }
         }
@@ -85,6 +90,14 @@ public class MainActivity extends Activity {
         public Hydrant(LatLng latLng, String s) {
             this.latLng = latLng;
             this.type = s;
+        }
+    }
+
+    private static class FireStation {
+        public LatLng latLng;
+
+        private FireStation(LatLng latLng) {
+            this.latLng = latLng;
         }
     }
 
@@ -121,13 +134,57 @@ public class MainActivity extends Activity {
         }
     }
 
+    private class DownloadFireStationsTask extends AsyncTask<Void, Void, List<FireStation>> {
+
+        @Override
+        protected List<FireStation> doInBackground(Void... v) {
+            List<FireStation> hydrants = new ArrayList<FireStation>();
+            try {
+                hydrants = getFireStations();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (XmlPullParserException e) {
+                e.printStackTrace();
+            }
+            return hydrants;
+        }
+
+        @Override
+        protected void onPostExecute(List<FireStation> fireStations) {
+            for (FireStation fireStation : fireStations) {
+                mMap.addMarker(new MarkerOptions()
+                        .position(fireStation.latLng)
+                        .icon(mFireStation));
+            }
+        }
+    }
+
+
+    public static List<FireStation> getFireStations() throws IOException, IllegalStateException, XmlPullParserException {
+        HttpClient httpclient = new DefaultHttpClient();
+        HttpPost httppost = new HttpPost("http://overpass-api.de/api/interpreter");
+        try {
+            List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(2);
+            nameValuePairs.add(new BasicNameValuePair("data", "node[\"amenity\"=\"fire_station\"]"+ BOUNDING_BOX +";out;"));
+            httppost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
+            HttpResponse response = httpclient.execute(httppost);
+            System.out.println(response.toString());
+            HttpEntity responseEntity = response.getEntity();
+            List<FireStation> result = parse(responseEntity.getContent());
+            return result;
+        } catch (ClientProtocolException e) {
+            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     public static List<Hydrant> getHydrants() throws IOException, IllegalStateException, XmlPullParserException {
         HttpClient httpclient = new DefaultHttpClient();
         HttpPost httppost = new HttpPost("http://overpass-api.de/api/interpreter");
         try {
             List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(2);
-            nameValuePairs.add(new BasicNameValuePair("data", "node[\"emergency\"=\"fire_hydrant\"](52.33743685775091,13.103256225585936,52.60888546492018,13.646392822265625);out;"));
+            nameValuePairs.add(new BasicNameValuePair("data", "node[\"emergency\"=\"fire_hydrant\"]" + BOUNDING_BOX +";out;"));
             httppost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
             HttpResponse response = httpclient.execute(httppost);
             System.out.println(response.toString());
@@ -191,7 +248,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    private static Hydrant readEntry(XmlPullParser parser) throws XmlPullParserException, IOException {
+    private static Object readEntry(XmlPullParser parser) throws XmlPullParserException, IOException {
         parser.require(XmlPullParser.START_TAG, null, "node");
         String lat = parser.getAttributeValue(null, "lat");
         String lon = parser.getAttributeValue(null, "lon");
@@ -207,7 +264,13 @@ public class MainActivity extends Activity {
                 skip(parser);
             }
         }
-        return new Hydrant(new LatLng(Double.parseDouble(lat), Double.parseDouble(lon)), tags.get("fire_hydrant:type"));
+        if ("fire_hydrant".equals(tags.get("emergency"))) {
+            return new Hydrant(new LatLng(Double.parseDouble(lat), Double.parseDouble(lon)), tags.get("fire_hydrant:type"));
+        } else if ("fire_station".equals(tags.get("amenity"))) {
+            return new FireStation(new LatLng(Double.parseDouble(lat), Double.parseDouble(lon)));
+        } else {
+            throw new RuntimeException("Strange thing.");
+        }
 
     }
 
