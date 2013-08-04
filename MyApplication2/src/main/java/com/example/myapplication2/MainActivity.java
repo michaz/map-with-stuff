@@ -11,6 +11,10 @@ import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Tile;
+import com.google.android.gms.maps.model.TileOverlayOptions;
+import com.google.android.gms.maps.model.TileProvider;
+import com.google.android.gms.maps.model.UrlTileProvider;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -27,6 +31,8 @@ import org.xmlpull.v1.XmlPullParserFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -70,14 +76,27 @@ public class MainActivity extends Activity {
             mMap = ((MapFragment) getFragmentManager().findFragmentById(R.id.map)).getMap();
             if (mMap != null) {
                 mMap.setMyLocationEnabled(true);
-                /*for (int i=0;i<1520;i++) {
-                    double lon = 13.3125 + Math.random() * (13.4595-13.3125);
-                    double lat = 52.4842 + Math.random() * (52.5542-52.4842);
-                    mMap.addMarker(new MarkerOptions()
-                    .position(new LatLng(lat, lon))
-                    .title("Hydrant Nr. "+ i));
-                }*/
-
+                mMap.setMapType(GoogleMap.MAP_TYPE_NONE);
+                mMap.addTileOverlay(new TileOverlayOptions().tileProvider(new UrlTileProvider(256, 256) {
+                    @Override
+                    public URL getTileUrl(int x, int y, int zoom) {
+                        try {
+                            return new URL("http://toolserver.org/tiles/bw-mapnik/" + zoom + "/" + x + "/" + y + ".png");
+                        } catch (MalformedURLException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                }));
+                mMap.addTileOverlay(new TileOverlayOptions().tileProvider(new UrlTileProvider(256, 256) {
+                    @Override
+                    public URL getTileUrl(int x, int y, int zoom) {
+                        try {
+                            return new URL("http://www.openfiremap.org/hytiles/" + zoom + "/" + x + "/" + y + ".png");
+                        } catch (MalformedURLException e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
+                }));
                 new DownloadFireStationsTask().execute();
                 new DownloadHydrantsTask().execute();
             }
