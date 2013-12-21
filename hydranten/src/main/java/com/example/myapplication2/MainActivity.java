@@ -1,19 +1,24 @@
 package com.example.myapplication2;
 
 import android.app.Activity;
+import android.content.Context;
+import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.Menu;
+import android.view.MenuItem;
+import android.widget.Toast;
 
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesClient;
+import com.google.android.gms.location.LocationClient;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.maps.model.Tile;
 import com.google.android.gms.maps.model.TileOverlayOptions;
-import com.google.android.gms.maps.model.TileProvider;
 import com.google.android.gms.maps.model.UrlTileProvider;
 
 import org.apache.http.HttpEntity;
@@ -38,7 +43,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class MainActivity extends Activity {
+public class MainActivity extends Activity implements GooglePlayServicesClient.ConnectionCallbacks, GooglePlayServicesClient.OnConnectionFailedListener {
 
     public static final String BOUNDING_BOX = "(52.33743685775091,13.103256225585936,52.60888546492018,13.646392822265625)";
     private GoogleMap mMap;
@@ -46,6 +51,7 @@ public class MainActivity extends Activity {
     private BitmapDescriptor mHydrantMarker;
     private BitmapDescriptor mAboveGround;
     private BitmapDescriptor mBelowGround;
+    private LocationClient mLocationClient;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -56,6 +62,7 @@ public class MainActivity extends Activity {
         mHydrantMarker = BitmapDescriptorFactory.fromResource(R.drawable.hydrant);
         mAboveGround = BitmapDescriptorFactory.fromResource(R.drawable.above_ground);
         mBelowGround = BitmapDescriptorFactory.fromResource(R.drawable.below_ground);
+        mLocationClient = new LocationClient(this, this, this);
     }
 
     @Override
@@ -101,6 +108,49 @@ public class MainActivity extends Activity {
                 new DownloadHydrantsTask().execute();
             }
         }
+    }
+
+    @Override
+    public void onConnected(Bundle bundle) {
+
+    }
+
+    @Override
+    public void onDisconnected() {
+
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult connectionResult) {
+
+    }
+
+    @Override
+    protected void onStart() {
+        super.onStart();
+        mLocationClient.connect();
+    }
+
+    @Override
+    protected void onStop() {
+        mLocationClient.disconnect();
+        super.onStop();
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.action_create:
+                printLocation();
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
+
+    private void printLocation() {
+        Location lastLocation = mLocationClient.getLastLocation();
+        Toast toast = Toast.makeText(getApplicationContext(), Double.toString(lastLocation.getAccuracy()), Toast.LENGTH_SHORT);
+        toast.show();
     }
 
     private static class Hydrant {
