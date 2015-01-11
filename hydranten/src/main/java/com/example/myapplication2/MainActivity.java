@@ -1,7 +1,6 @@
 package com.example.myapplication2;
 
 import android.app.Activity;
-import android.app.Fragment;
 import android.app.FragmentTransaction;
 import android.location.Location;
 import android.os.AsyncTask;
@@ -12,7 +11,8 @@ import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GooglePlayServicesClient;
-import com.google.android.gms.location.LocationClient;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapFragment;
 import com.google.android.gms.maps.model.BitmapDescriptor;
@@ -40,7 +40,7 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
     private BitmapDescriptor mHydrantMarker;
     private BitmapDescriptor mAboveGround;
     private BitmapDescriptor mBelowGround;
-    private LocationClient mLocationClient;
+    private GoogleApiClient mGoogleApiClient;
     private HydrantDetailsFragment mHydrantDetails;
     private Map<Marker, Overpass.Hydrant> mHydrantMarkers = new HashMap<Marker, Overpass.Hydrant>();
 
@@ -57,7 +57,9 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
         mHydrantMarker = BitmapDescriptorFactory.fromResource(R.drawable.hydrant);
         mAboveGround = BitmapDescriptorFactory.fromResource(R.drawable.above_ground);
         mBelowGround = BitmapDescriptorFactory.fromResource(R.drawable.below_ground);
-        mLocationClient = new LocationClient(this, this, this);
+        mGoogleApiClient = new GoogleApiClient.Builder(this)
+                .addApi(LocationServices.API)
+                .build();
     }
 
     @Override
@@ -125,12 +127,12 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
     @Override
     protected void onStart() {
         super.onStart();
-        mLocationClient.connect();
+        mGoogleApiClient.connect();
     }
 
     @Override
     protected void onStop() {
-        mLocationClient.disconnect();
+        mGoogleApiClient.disconnect();
         super.onStop();
     }
 
@@ -145,7 +147,7 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
     }
 
     private void printLocation() {
-        Location lastLocation = mLocationClient.getLastLocation();
+        Location lastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
         Toast toast = Toast.makeText(getApplicationContext(), Double.toString(lastLocation.getAccuracy()), Toast.LENGTH_SHORT);
         toast.show();
     }
