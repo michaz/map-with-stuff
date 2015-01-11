@@ -80,17 +80,6 @@ public class MainActivity extends Activity implements GooglePlayServicesClient.C
             mMap = ((MapFragment) getFragmentManager().findFragmentById(R.id.map)).getMap();
             if (mMap != null) {
                 mMap.setMyLocationEnabled(true);
-                mMap.setMapType(GoogleMap.MAP_TYPE_NONE);
-                mMap.addTileOverlay(new TileOverlayOptions().tileProvider(new UrlTileProvider(256, 256) {
-                    @Override
-                    public URL getTileUrl(int x, int y, int zoom) {
-                        try {
-                            return new URL("http://toolserver.org/tiles/bw-mapnik/" + zoom + "/" + x + "/" + y + ".png");
-                        } catch (MalformedURLException e) {
-                            throw new RuntimeException(e);
-                        }
-                    }
-                }));
                 mMap.addTileOverlay(new TileOverlayOptions().tileProvider(new UrlTileProvider(256, 256) {
                     @Override
                     public URL getTileUrl(int x, int y, int zoom) {
